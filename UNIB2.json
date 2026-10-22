@@ -42,6 +42,7 @@
     "ST1_STUN_T"		:["0xC654A8"],
     "ST1_STUN_R"		:["0xC654A4"],
     "ST1_INVINC"		:["0xC652E1"],
+    "ST1_ACTIVE"		:["0xC652E0"],
 
     "ST2_BUSY"			:["0xC66509"],
     "ST2_ATTACKING"		:["0xC662F4"],
@@ -49,6 +50,7 @@
     "ST2_STUN_T"		:["0xC66068"],
     "ST2_STUN_R"		:["0xC66064"],
     "ST2_INVINC"		:["0xC65EA1"],
+    "ST2_ACTIVE"		:["0xC65EA0"],
 
     "AN1_FSINCE"		:["0xC65900"],
 

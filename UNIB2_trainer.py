@@ -25,13 +25,14 @@ FDM_XPAD = 1 # Pixels between each square in a row
 FDM_BG              = "#1A1A1A" # Background Color
 FDM_C_NEXT          = "#A5A0A0" # Color of the NEXT frame, overriding previous color
 FDM_C_EMPTY         = "#4B4B4B" # Color of empty squares
-FDM_C_STUN          = "#AD2614" # Hitstun/Blockstun
+FDM_C_STUN          = "#990000" # Hitstun/Blockstun
 FDM_C_ATK           = "#0DE76F" # Attacking
 FDM_C_ADV           = "#1493B9" # At neutral while other is not
-FDM_C_INVINCIBLE    = "#DF581A" # Invincible
-FDM_C_SKIPPED       = "#5F130B" #This frame was skipped due to lag, so actual data is unknown
+FDM_C_INVINCIBLE    = "#F1F1F1" # Invincible
+FDM_C_SKIPPED       = "#5F130B" # This frame was skipped due to lag, so actual data is unknown
 FDM_C_AIRBORNE      = "#FFFF00" # Jumping
 FDM_C_BUSY          = "#682662" # Not neutral, attacking, or getting hit; Backdash, Assault, etc
+FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 
 # These may be also changed, but be careful
@@ -222,6 +223,9 @@ class FrameDataMeter(ctk.CTkFrame):
             skip = False
         elif g_int_1b(a.ST1_INVINC if player1 else a.ST2_INVINC) == 0:
             color = FDM_C_INVINCIBLE
+            skip = False
+        elif g_int_1b(a.ST1_ACTIVE if player1 else a.ST2_ACTIVE) != 0:
+            color = FDM_C_ACTIVE
             skip = False
         elif g_int(a.ST1_ATTACKING if player1 else a.ST2_ATTACKING) > 0:
             color = FDM_C_ATK
