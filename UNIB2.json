@@ -45,6 +45,7 @@
 
     "ST2_BUSY"			:["0xC66509"],
     "ST2_ATTACKING"		:["0xC662F4"],
+    "ST2_AIRBORNE"		:["0xC65EAA"],
     "ST2_STUN_T"		:["0xC66068"],
     "ST2_STUN_R"		:["0xC66064"],
     "ST2_INVINC"		:["0xC65EA1"],

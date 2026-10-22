@@ -28,8 +28,10 @@ FDM_C_EMPTY         = "#4B4B4B" # Color of empty squares
 FDM_C_STUN          = "#AD2614" # Hitstun/Blockstun
 FDM_C_ATK           = "#0DE76F" # Attacking
 FDM_C_ADV           = "#1493B9" # At neutral while other is not
-FDM_C_INVINCIBLE    = "#ECCB0D" # Invincible
+FDM_C_INVINCIBLE    = "#DF581A" # Invincible
 FDM_C_SKIPPED       = "#5F130B" #This frame was skipped due to lag, so actual data is unknown
+FDM_C_AIRBORNE      = "#FFFF00" # Jumping
+FDM_C_BUSY          = "#682662" # Not neutral, attacking, or getting hit; Backdash, Assault, etc
 
 
 # These may be also changed, but be careful
@@ -183,6 +185,11 @@ class FrameDataMeter(ctk.CTkFrame):
             elif g_int(a.ST1_STUN_T) != 0:
                 p1_color = FDM_C_STUN
                 skip = False
+            elif g_int_1b(a.ST1_BUSY) > 0:
+                p1_color = FDM_C_BUSY
+                skip = False
+            elif g_int_1b(a.ST1_AIRBORNE) != 0:
+                p1_color = FDM_C_AIRBORNE
             else:
                 p1_color = FDM_C_ADV
 
@@ -199,6 +206,11 @@ class FrameDataMeter(ctk.CTkFrame):
             elif g_int(a.ST2_STUN_T) != 0:
                 p2_color = FDM_C_STUN
                 skip = False
+            elif g_int_1b(a.ST2_BUSY) > 0:
+                p2_color = FDM_C_BUSY
+                skip = False
+            elif g_int_1b(a.ST2_AIRBORNE) != 0:
+                p2_color = FDM_C_AIRBORNE
             else:
                 p2_color = FDM_C_ADV
 
