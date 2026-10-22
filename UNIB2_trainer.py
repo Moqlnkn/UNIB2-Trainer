@@ -1,5 +1,7 @@
 import tkinter as tk
 import customtkinter as ctk
+import json
+from pathlib import Path
 import pymem
 import pymem.process
 import math
@@ -7,10 +9,11 @@ from enum import Enum
 import win32gui as wg # pyright: ignore[reportMissingModuleSource]
 
 
-# These may be changed
+# THESE VARIABLES MAY BE CHANGED
+JSON_FILENAME = "UNIB2.json"
 WINDOW_TITLE = "UNIB2 Trainer"
-WINDOW_ALPHA = 0.9 # 0 = invincible, 1 = opaque
-LABEL_VISIBLE = False # Whether to show values; does not affect Frame Data Bar
+WINDOW_ALPHA = 0.9 # 0 = invisible, 1 = opaque
+LABEL_VISIBLE = True # Whether to show values; does not affect Frame Data Bar
 LABEL_FONT = ("Times New Roman", 25, "bold")
 LABEL_PAD = (0, 0)
 FDM_WIDTH = 120 # Number of squares per Frame Data Meter row; one square per frame
@@ -56,65 +59,45 @@ if not wg.FindWindow(None, WINDOW_NAME):
 
 
 
-# Store all addresses in a unique class and call it "a"
-class Addresses():
-    # Universal Variables
-    GRDCLOCK = [0x874FB0]
+# Store all addresses in a unique class and call it "a" (read from JSON file)
 
-    # Player 1
-    P1_HEALTH = [0xC6530C]
-    P1_EXS = [0xC65330]
-    P1_GRDSTOCKS = [0x874DD0]
-    P1_GRDCURR = [0x874DD5]
-    P1_CHAR = [0x5A4324]
-    P1_VORPAL = [0x87A6B0]
-    P1_VOTIME = [0xC6538C]
+def convert_address(value):
+    if isinstance(value, str):
+        return int(value, 0)
+    if isinstance(value, list):
+        return [convert_address(item) for item in value]
+    return value
 
-    # Player 2
-    P2_HEALTH = [0xC65ECC]
-    P2_EXS = [0xC65EF0]
-    P2_GRDSTOCKS = [0x874F1C]
-    P2_GRDCURR = [0x874F21]
-    P2_CHAR = [0x5A4328]
-    P2_VORPAL = [0x87A720]
-    P2_VOTIME = [0xC65F4C]
+class Addresses:
+    def __init__(self, filename = JSON_FILENAME):
 
-    # Frame Data
-    FD1_STARTUP = [0x87B4C4, [0x20]]
-    FD1_TOTAL = [0x87B4C4, [0x24]]
-    FD1_ADVANTAGE = [0x87B4C4, [0x30]]
-    FD2_STARTUP = [0x87B4C4, [0x68]]
-    FD2_TOTAL = [0x87B4C4, [0x6C]]
-    FD2_ADVANTAGE = [0x87B4C4, [0x80]]
+        script_dir = Path(__file__).resolve().parent
+        file_path = script_dir / filename
 
-    # Combo Info
-    DI_DAMAGE = [0x859B2C]
-    DI_DAMAGE_BASIC = [0x859B30]
-    DI_COMBO = [0x859B24]
-    DI_COMBO_BASIC = [0x859B1C]
-    DI_MAXCOMBO = [0x8776F4]
-    DI_MAXCOMBO_BASIC = [0x859B1C]
-    DI_HIT_PRORATION = [0x859B48]
-    DI_HIT_DETERIORATION = [0x859B4C]
-    DI_COMBO_PRORATION = [0x859B04]
-    DI_COMBO_DETERIORATION = [0x859B14]
+        with open(file_path, "r", encoding = "utf-8") as file:
+            raw_addresses = json.load(file)
 
-    # P1 States
-    ST1_BUSY = [0xC65949]      # 0 when able to attack, 1 when unable
-    ST1_ATTACKING = [0xC65734] # 0 when not attacking, 1 when attacking
-    ST1_AIRBORNE = [0xC652EB]  # 0 when not airborne, 1 when airborne
-    ST1_STUN_T = [0xC654A8] # Total hit-/block-stun imparted on this hit
-    ST1_STUN_R = [0xC654A4] # Remaining hit-/block-stun before recovery
+        self.addresses = {
+            name: convert_address(value)
+            for name, value in raw_addresses.items()
+        }
 
-    # P2 States
-    ST2_BUSY = [0xC66509]
-    ST2_ATTACKING = [0xC662F4]
-    ST2_STUN_T = [0xC66068]
-    ST2_STUN_R = [0xC66064]
-
+    def __getattr__(self, name):
+        try:
+            return self.addresses[name]
+        except KeyError:
+            raise AttributeError(
+                f"Address {name} not found in JSON file!"
+            ) from None
 
 a = Addresses()
 
+
+
+
+
+
+# Frame Data Meter
 
 class FrameDataMeter(ctk.CTkFrame):
 
@@ -268,12 +251,19 @@ class FrameDataMeter(ctk.CTkFrame):
         else:
             result = int(grd_clock + 780 - s.last_GRD_clock)
         s.last_GRD_clock = grd_clock
-        if result > 1:
-            print(f"RESULT {result} GREATER THAN 1 IN FrameDataMeter.updates_needed()! MAY HAVE INACCURATE DATA!")
+        if result > 1 and grd_clock > 0:
+            print(f"Lag Detected at {grd_clock}|{result}! Frame Data Meter may have an error!")
         if result > 10:
             s.reset_fdm()
         return result
 
+
+
+
+
+
+
+# Data Overlay (top right)
 
 class Overlay(ctk.CTk):
 

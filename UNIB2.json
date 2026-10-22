@@ -1,0 +1,48 @@
+{
+    "GRDCLOCK"			:["0x874FB0"],
+
+    "P1_HEALTH"			:["0xC6530C"],
+    "P1_EXS"			:["0xC65330"],
+    "P1_GRDSTOCKS"		:["0x874DD0"],
+    "P1_GRDCURR"		:["0x874DD5"],
+    "P1_CHAR"			:["0x5A4324"],
+    "P1_VORPAL"			:["0x87A6B0"],
+    "P1_VOTIME"			:["0xC6538C"],
+
+    "P2_HEALTH"			:["0xC65ECC"],
+    "P2_EXS"			:["0xC65EF0"],
+    "P2_GRDSTOCKS"		:["0x874F1C"],
+    "P2_GRDCURR"		:["0x874F21"],
+    "P2_CHAR"			:["0x5A4328"],
+    "P2_VORPAL"			:["0x87A720"],
+    "P2_VOTIME"			:["0xC65F4C"],
+
+    "FD1_STARTUP"		:["0x87B4C4", ["0x20"]],
+    "FD1_TOTAL"			:["0x87B4C4", ["0x24"]],
+    "FD1_ADVANTAGE"		:["0x87B4C4", ["0x30"]],
+    "FD2_STARTUP"		:["0x87B4C4", ["0x68"]],
+    "FD2_TOTAL"			:["0x87B4C4", ["0x6C"]],
+    "FD2_ADVANTAGE"		:["0x87B4C4", ["0x80"]],
+
+    "DI_DAMAGE"			:["0x859B2C"],
+    "DI_DAMAGE_BASIC"		:["0x859B30"],
+    "DI_COMBO"			:["0x859B24"],
+    "DI_COMBO_BASIC"		:["0x859B1C"],
+    "DI_MAXCOMBO"		:["0x8776F4"],
+    "DI_MAXCOMBO_BASIC"		:["0x859B1C"],
+    "DI_HIT_PRORATION"		:["0x859B48"],
+    "DI_HIT_DETERIORATION"	:["0x859B4C"],
+    "DI_COMBO_PRORATION"	:["0x859B04"],
+    "DI_COMBO_DETERIORATION"	:["0x859B14"],
+
+    "ST1_BUSY"			:["0xC65949"],
+    "ST1_ATTACKING"		:["0xC65734"],
+    "ST1_AIRBORNE"		:["0xC652EB"],
+    "ST1_STUN_T"		:["0xC654A8"],
+    "ST1_STUN_R"		:["0xC654A4"],
+
+    "ST2_BUSY"			:["0xC66509"],
+    "ST2_ATTACKING"		:["0xC662F4"],
+    "ST2_STUN_T"		:["0xC66068"],
+    "ST2_STUN_R"		:["0xC66064"]
+}
