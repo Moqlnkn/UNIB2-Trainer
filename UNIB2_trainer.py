@@ -13,7 +13,7 @@ import win32gui as wg # pyright: ignore[reportMissingModuleSource]
 JSON_FILENAME = "UNIB2.json"
 WINDOW_TITLE = "UNIB2 Trainer"
 WINDOW_ALPHA = 0.9 # 0 = invisible, 1 = opaque
-LABEL_VISIBLE = True # Whether to show values; does not affect Frame Data Bar
+LABEL_VISIBLE = False # Whether to show values; does not affect Frame Data Bar
 LABEL_FONT = ("Times New Roman", 25, "bold")
 LABEL_PAD = (0, 0)
 FDM_WIDTH = 120 # Number of squares per Frame Data Meter row; one square per frame
@@ -22,12 +22,14 @@ FDM_SQWIDTH = 14 # Pixel-width of each square
 FDM_SQHEIGHT = 23 # Pixel-height of each square
 FDM_YPAD = 5 # Pixels between top and bottom bars
 FDM_XPAD = 1 # Pixels between each square in a row
-FDM_BG = "#1A1A1A" # Background Color
-FDM_C_NEXT = "#A5A0A0" # Color of the NEXT frame, overriding previous
-FDM_C_EMPTY = "#4B4B4B" # Color of empty squares
-FDM_C_STUN = "#AD2614" # Hitstun/Blockstun
-FDM_C_ATK = "#0DE76F" # Attacking
-FDM_C_ADV = "#1493B9" # At neutral while other is not
+FDM_BG              = "#1A1A1A" # Background Color
+FDM_C_NEXT          = "#A5A0A0" # Color of the NEXT frame, overriding previous color
+FDM_C_EMPTY         = "#4B4B4B" # Color of empty squares
+FDM_C_STUN          = "#AD2614" # Hitstun/Blockstun
+FDM_C_ATK           = "#0DE76F" # Attacking
+FDM_C_ADV           = "#1493B9" # At neutral while other is not
+FDM_C_INVINCIBLE    = "#ECCB0D" # Invincible
+FDM_C_SKIPPED       = "#5F130B" #This frame was skipped due to lag, so actual data is unknown
 
 
 # These may be also changed, but be careful
@@ -106,7 +108,7 @@ class FrameDataMeter(ctk.CTkFrame):
 
         s.index = 0
         s.to_reset = False
-        s.last_GRD_clock = g_int(a.GRDCLOCK) / 100
+        s.last_clock = g_int(a.MISCTIMER)
 
         width = FDM_WIDTH * (FDM_SQWIDTH + FDM_XPAD) - FDM_XPAD
         height = 2 * FDM_SQHEIGHT + FDM_YPAD
@@ -163,13 +165,19 @@ class FrameDataMeter(ctk.CTkFrame):
 
     def go(self): # Read all relevant values and update the frame data meter accordingly.
         un = self.updates_needed()
-        for _ in range(un):
+        for i in range(un):
             p1_color = FDM_C_EMPTY # Update these
             p2_color = FDM_C_EMPTY
             skip = True
 
             # Player 1
-            if g_int(a.ST1_ATTACKING) > 0:
+            if (i < un - 1) and not (self.to_reset):
+                p1_color = FDM_C_SKIPPED
+                skip = False
+            elif g_int_1b(a.ST1_INVINC) == 0:
+                p1_color = FDM_C_INVINCIBLE
+                skip = False
+            elif g_int(a.ST1_ATTACKING) > 0:
                 p1_color = FDM_C_ATK
                 skip = False
             elif g_int(a.ST1_STUN_T) != 0:
@@ -179,7 +187,13 @@ class FrameDataMeter(ctk.CTkFrame):
                 p1_color = FDM_C_ADV
 
             # Player 2
-            if g_int(a.ST2_ATTACKING) > 0:
+            if (i < un - 1) and not (self.to_reset):
+                p2_color = FDM_C_SKIPPED
+                skip = False
+            elif g_int(a.ST2_INVINC) == 0:
+                p2_color = FDM_C_INVINCIBLE
+                skip = False
+            elif g_int(a.ST2_ATTACKING) > 0:
                 p2_color = FDM_C_ATK
                 skip = False
             elif g_int(a.ST2_STUN_T) != 0:
@@ -243,18 +257,19 @@ class FrameDataMeter(ctk.CTkFrame):
             )
         self.to_reset = False
 
-    def updates_needed(s): # Based on the GRD Clock, how many updates need to happen?
-        grd_clock = math.floor(g_int(a.GRDCLOCK) / 100)
+    def updates_needed(s): # Based on the MISCTIMER, how many updates need to happen?
+        clock = math.floor(g_int_1b(a.MISCTIMER))
         result = 0
-        if (s.last_GRD_clock <= grd_clock):
-            result = int(grd_clock - s.last_GRD_clock)
+        if (s.last_clock <= clock):
+            result = int(clock - s.last_clock)
         else:
-            result = int(grd_clock + 780 - s.last_GRD_clock)
-        s.last_GRD_clock = grd_clock
-        if result > 1 and grd_clock > 0:
-            print(f"Lag Detected at {grd_clock}|{result}! Frame Data Meter may have an error!")
+            result = int(clock + 256 - s.last_clock)
+        s.last_clock = clock
+        if result > 2 and clock > 7:
+            print(f"Lag Detected at {clock}|{result}! Frame Data Meter may have an error!")
         if result > 10:
             s.reset_fdm()
+            result = 1
         return result
 
 

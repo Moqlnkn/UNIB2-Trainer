@@ -1,5 +1,6 @@
 {
     "GRDCLOCK"			:["0x874FB0"],
+    "MISCTIMER"			:["0xC666E0"],
 
     "P1_HEALTH"			:["0xC6530C"],
     "P1_EXS"			:["0xC65330"],
@@ -40,9 +41,15 @@
     "ST1_AIRBORNE"		:["0xC652EB"],
     "ST1_STUN_T"		:["0xC654A8"],
     "ST1_STUN_R"		:["0xC654A4"],
+    "ST1_INVINC"		:["0xC652E1"],
 
     "ST2_BUSY"			:["0xC66509"],
     "ST2_ATTACKING"		:["0xC662F4"],
     "ST2_STUN_T"		:["0xC66068"],
-    "ST2_STUN_R"		:["0xC66064"]
+    "ST2_STUN_R"		:["0xC66064"],
+    "ST2_INVINC"		:["0xC65EA1"],
+
+    "AN1_FSINCE"		:["0xC65900"],
+
+    "json_end" : ["0x0"]
 }
