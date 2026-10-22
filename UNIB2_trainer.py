@@ -29,7 +29,7 @@ FDM_C_ADV = "#1493B9" # At neutral while other is not
 
 # These may be also changed, but be careful
 REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
-FDM_REFRESH_MS = 5 # Same but for FrameDataMeter
+FDM_REFRESH_MS = 12 # Same but for FrameDataMeter
 WINDOW_RESOLUTION = "1920x1080"
 WINDOW_MINSIZE = [320, 240]
 WINDOW_DRAGGABLE = False # Whether window is draggable; this disables transparency and auto-snapping
@@ -173,7 +173,7 @@ class FrameDataMeter(ctk.CTkFrame):
             s.go()
 
         except Exception as error:
-            print(f"Memory read failed: {error}")
+            print(f"Memory read failed in FrameDataMeter(): {error}")
 
         finally:
             s.after(FDM_REFRESH_MS, s.fdm_update) #Run again on the next interval defined by REFRESH_MS
@@ -236,11 +236,11 @@ class FrameDataMeter(ctk.CTkFrame):
                 fill = FDM_C_NEXT
             )
             self.canvas.itemconfigure(
-                self.p1_rectangles[self.index + 1],
+                self.p1_rectangles[(self.index + 1) % FDM_WIDTH],
                 fill = FDM_C_EMPTY
             )
             self.canvas.itemconfigure(
-                self.p2_rectangles[self.index + 1],
+                self.p2_rectangles[(self.index + 1) % FDM_WIDTH],
                 fill = FDM_C_EMPTY
             )
 
@@ -270,6 +270,8 @@ class FrameDataMeter(ctk.CTkFrame):
         s.last_GRD_clock = grd_clock
         if result > 1:
             print(f"RESULT {result} GREATER THAN 1 IN FrameDataMeter.updates_needed()! MAY HAVE INACCURATE DATA!")
+        if result > 10:
+            s.reset_fdm()
         return result
 
 
