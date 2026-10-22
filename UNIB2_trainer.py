@@ -168,52 +168,11 @@ class FrameDataMeter(ctk.CTkFrame):
     def go(self): # Read all relevant values and update the frame data meter accordingly.
         un = self.updates_needed()
         for i in range(un):
-            p1_color = FDM_C_EMPTY # Update these
-            p2_color = FDM_C_EMPTY
-            skip = True
-
-            # Player 1
-            if (i < un - 1) and not (self.to_reset):
-                p1_color = FDM_C_SKIPPED
-                skip = False
-            elif g_int_1b(a.ST1_INVINC) == 0:
-                p1_color = FDM_C_INVINCIBLE
-                skip = False
-            elif g_int(a.ST1_ATTACKING) > 0:
-                p1_color = FDM_C_ATK
-                skip = False
-            elif g_int(a.ST1_STUN_T) != 0:
-                p1_color = FDM_C_STUN
-                skip = False
-            elif g_int_1b(a.ST1_BUSY) > 0:
-                p1_color = FDM_C_BUSY
-                skip = False
-            elif g_int_1b(a.ST1_AIRBORNE) != 0:
-                p1_color = FDM_C_AIRBORNE
-            else:
-                p1_color = FDM_C_ADV
-
-            # Player 2
-            if (i < un - 1) and not (self.to_reset):
-                p2_color = FDM_C_SKIPPED
-                skip = False
-            elif g_int(a.ST2_INVINC) == 0:
-                p2_color = FDM_C_INVINCIBLE
-                skip = False
-            elif g_int(a.ST2_ATTACKING) > 0:
-                p2_color = FDM_C_ATK
-                skip = False
-            elif g_int(a.ST2_STUN_T) != 0:
-                p2_color = FDM_C_STUN
-                skip = False
-            elif g_int_1b(a.ST2_BUSY) > 0:
-                p2_color = FDM_C_BUSY
-                skip = False
-            elif g_int_1b(a.ST2_AIRBORNE) != 0:
-                p2_color = FDM_C_AIRBORNE
-            else:
-                p2_color = FDM_C_ADV
-
+            p1 = self.update_squares(True, i, un)
+            p2 = self.update_squares(False, i, un)
+            p1_color = p1[0]
+            p2_color = p2[0]
+            skip = p1[1] and p2[1]
 
             # Update Canvas
             if not skip:
@@ -254,6 +213,31 @@ class FrameDataMeter(ctk.CTkFrame):
             )
 
         # end go()
+
+    def update_squares(self, player1, i, un):
+        skip = True
+        color = FDM_C_EMPTY
+        if (i < un - 1) and not (self.to_reset):
+            color = FDM_C_SKIPPED
+            skip = False
+        elif g_int_1b(a.ST1_INVINC if player1 else a.ST2_INVINC) == 0:
+            color = FDM_C_INVINCIBLE
+            skip = False
+        elif g_int(a.ST1_ATTACKING if player1 else a.ST2_ATTACKING) > 0:
+            color = FDM_C_ATK
+            skip = False
+        elif g_int(a.ST1_STUN_T if player1 else a.ST2_STUN_T) != 0:
+            color = FDM_C_STUN
+            skip = False
+        elif g_int_1b(a.ST1_BUSY if player1 else a.ST2_BUSY) > 0:
+            color = FDM_C_BUSY
+            skip = False
+        elif g_int_1b(a.ST1_AIRBORNE if player1 else a.ST2_AIRBORNE) != 0:
+            color = FDM_C_AIRBORNE
+        else:
+            color = FDM_C_ADV
+
+        return [color, skip]
 
     def reset_fdm(self):
         self.index = 0
