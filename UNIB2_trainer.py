@@ -10,18 +10,37 @@ import win32gui as wg # pyright: ignore[reportMissingModuleSource]
 
 
 # THESE VARIABLES MAY BE CHANGED
+
+# top of screen
+HD_HEIGHT = 125 # HP Display height below top of screen
+# ----- middle of screen -----
+FDM_HEIGHT = 10 # Frame Data Meter height above GRD Display
+GD_HEIGHT = 65 # GRD Display height above bottom of screen
+# bottom of screen
+
 JSON_FILENAME = "UNIB2.json"
 WINDOW_TITLE = "UNIB2 Trainer"
-WINDOW_ALPHA = 0.9 # 0 = invisible, 1 = opaque
+WINDOW_ALPHA = 0.9
+
 LABEL_VISIBLE = False # Whether to show values; does not affect Frame Data Bar
 LABEL_FONT = ("Times New Roman", 25, "bold")
 LABEL_PAD = (0, 0)
-FDM_WIDTH = 120 # Number of squares per Frame Data Meter row; one square per frame
-FDM_POSITION = [0, 0] # X-Y Coordinates of the Frame Data Meter
+
+HD_SPACING = 220 # Distance between HP values
+HD_FONT = ("Times New Roman", 32, "bold")
+
+GD_SPACING = 380 # Distance between GRD values
+GD_FONT = ("Times New Roman", 32, "bold")
+
+FDM_WIDTH = 120 # IMPORTANT: Number of squares per Frame Data Meter row; one square per frame
 FDM_SQWIDTH = 14 # Pixel-width of each square
 FDM_SQHEIGHT = 23 # Pixel-height of each square
 FDM_YPAD = 5 # Pixels between top and bottom bars
 FDM_XPAD = 1 # Pixels between each square in a row
+FDM_BORDERW = 7 # Border width around the Meter
+FDM_HWIDTH = 2 # Outline Width
+FDM_HCOLOR = "#30179E" # Outline Color
+
 FDM_BG              = "#1A1A1A" # Background Color
 FDM_C_NEXT          = "#A5A0A0" # Color of the NEXT frame, overriding previous color
 FDM_C_EMPTY         = "#4B4B4B" # Color of empty squares
@@ -35,15 +54,21 @@ FDM_C_BUSY          = "#682662" # Not neutral, attacking, or getting hit; Backda
 FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 
+
+
+
 # These may be also changed, but be careful
 REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
-FDM_REFRESH_MS = 12 # Same but for FrameDataMeter
+FDM_REFRESH_MS = 9 # Same but for FrameDataMeter
 WINDOW_RESOLUTION = "1920x1080"
 WINDOW_MINSIZE = [320, 240]
 WINDOW_DRAGGABLE = False # Whether window is draggable; this disables transparency and auto-snapping
 WINDOW_BG_TRANSPARENT = True
 WINDOW_BG_TRANSPARENT_C = "#000000" # The window becomes this color, then is color-keyed out; it's not perfect
 AUTOSNAP_POSITION = [0, 0] # Autosnap to this position, relative to the game window, if WINDOW_DRAGGABLE is False
+
+
+
 
 
 # Probably never change these
@@ -56,6 +81,13 @@ module =  pymem.process.module_from_name(pm.process_handle, EXECUTABLE_NAME)
 base_address = module.lpBaseOfDll
 l = [] # Labels
 i = -1 # Label indexing
+
+
+
+
+
+
+
 
 # Auto-snapping
 if not wg.FindWindow(None, WINDOW_NAME):
@@ -113,18 +145,17 @@ class FrameDataMeter(ctk.CTkFrame):
         s.to_reset = False
         s.last_clock = g_int(a.MISCTIMER)
 
-        width = FDM_WIDTH * (FDM_SQWIDTH + FDM_XPAD) - FDM_XPAD
-        height = 2 * FDM_SQHEIGHT + FDM_YPAD
-
         s.canvas = tk.Canvas(
             s,
-            width = width,
-            height = height,
+            width = FDM_WIDTH * (FDM_SQWIDTH + FDM_XPAD) - FDM_XPAD,
+            height = 2 * FDM_SQHEIGHT + FDM_YPAD,
             bg = FDM_BG,
-            highlightthickness = 0
+            highlightthickness = FDM_HWIDTH,
+            highlightbackground= FDM_HCOLOR
         )
+        s.canvas.pack(padx = FDM_BORDERW, pady = FDM_BORDERW)
 
-        s.canvas.pack(padx = 5, pady = 5)
+
 
         s.p1_rectangles = []
         s.p2_rectangles = []
@@ -301,23 +332,58 @@ class Overlay(ctk.CTk):
             s.configure(fg_color=WINDOW_BG_TRANSPARENT_C)
             s.attributes("-transparentcolor", WINDOW_BG_TRANSPARENT_C)
 
+
+
+
+
+
+        # From top of screen
+        s.make_HD_display()
         s.make_labels()
 
-        s.overlay_update()
-
+        # From bottom of screen
+        s.make_GRD_display()
         s.make_fdm()
+
+        s.overlay_update()
 
         #end __init__()
 
     def make_fdm(s):
         s.fdm = FrameDataMeter(s)
-        s.fdm.pack(side = "bottom")
+        s.fdm.pack(side = "bottom", pady = FDM_HEIGHT)
         s.fdm.fdm_update()
+
+    def make_GRD_display(s):
+        s.GD_frame1 = ctk.CTkFrame(s, fg_color = "transparent")
+        s.GD_frame1.pack(side="bottom")
+        s.GD_frame2 = ctk.CTkFrame(s.GD_frame1, fg_color = "transparent")
+        s.GD_frame2.pack(anchor="center", pady=(0, GD_HEIGHT))
+
+        s.GD_left = ctk.CTkLabel(s.GD_frame2, font=GD_FONT)
+        s.GD_left.pack(side="left", padx=(0, GD_SPACING))
+        s.GD_right = ctk.CTkLabel(s.GD_frame2, font=GD_FONT)
+        s.GD_right.pack(side="right")
+
+    def make_HD_display(s):
+        s.HD_frame1 = ctk.CTkFrame(s, fg_color = "transparent")
+        s.HD_frame1.pack(side = "top")
+        s.HD_frame2 = ctk.CTkFrame(s.HD_frame1, fg_color = "transparent")
+        s.HD_frame2.pack(anchor="center", pady=(HD_HEIGHT, 0))
+
+        s.HD_left = ctk.CTkLabel(s.HD_frame2, font = HD_FONT)
+        s.HD_left.pack(side = "left", padx = (0, HD_SPACING))
+        s.HD_right = ctk.CTkLabel(s.HD_frame2, font = HD_FONT)
+        s.HD_right.pack(side = "right")
 
     def make_labels(s):
         num_labels = 20 # Can be higher than needed, but not lower
         s.l = [nl(s) for _ in range(num_labels)] # shoutouts to Google for fixing this...
         #end make_labels
+
+
+
+
 
     def update_labels(s):
         if LABEL_VISIBLE:
@@ -327,20 +393,10 @@ class Overlay(ctk.CTk):
             val1 = int(780 - g_int(a.GRDCLOCK) / 100)
             next(s).configure(text = f"GRD Clock: {val1}")
 
-            # Player Health
-            val1 = int(g_int(a.P1_HEALTH))
-            val2 = int(g_int(a.P2_HEALTH))
-            next(s).configure(text = f"HEALTH: {val1} | {val2}")
-
             # Player EXS
             val1 = g_int(a.P1_EXS) / 100
             val2 = g_int(a.P2_EXS) / 100
             next(s).configure(text = f"EXS: {val1:.2f} | {val2:.2f}")
-
-            # Player GRD
-            val1 = g_int(a.P1_GRDSTOCKS) + g_int(a.P1_GRDCURR) / 100
-            val2 = g_int(a.P2_GRDSTOCKS) + g_int(a.P2_GRDCURR) / 100
-            next(s).configure(text = f"GRD: {val1:.2f} | {val2:.2f}")
 
             # Player Character
             val1 = get_char_name(g_int(a.P1_CHAR))
@@ -375,8 +431,17 @@ class Overlay(ctk.CTk):
 
         #end update_labels
 
+    def update_GD(s):
+        p1_GRD = g_int(a.P1_GRDSTOCKS) + g_int(a.P1_GRDCURR) / 100
+        p2_GRD = g_int(a.P2_GRDSTOCKS) + g_int(a.P2_GRDCURR) / 100
+        s.GD_left .configure(text = f"{p1_GRD:.2f}")
+        s.GD_right.configure(text = f"{p2_GRD:.2f}")
 
 
+    def update_HD(s):
+        s.HD_left .configure(text = f"{int(g_int(a.P1_HEALTH))}")
+        s.HD_right.configure(text = f"{int(g_int(a.P2_HEALTH))}")
+        
 
 
 
@@ -396,6 +461,8 @@ class Overlay(ctk.CTk):
     def overlay_update(self): #This is run every frame (defined by REFRESH_MS)
         try:
             self.update_labels()
+            self.update_GD()
+            self.update_HD()
 
         except Exception as error:
             print(f"Memory read failed: {error}")
