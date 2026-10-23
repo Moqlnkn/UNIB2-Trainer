@@ -59,8 +59,9 @@ FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 
 # These may be also changed, but be careful
-REFRESH_MS = 32 # UI Frame Rate (milliseconds per refresh)
+REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
 FDM_REFRESH_MS = 10 # Same but for FrameDataMeter
+# 10: 1001 1000 2000 0000 1000 1000 0000
 WINDOW_RESOLUTION = "1920x1080"
 WINDOW_MINSIZE = [320, 240]
 WINDOW_DRAGGABLE = False # Whether window is draggable; this disables transparency and auto-snapping
@@ -157,7 +158,9 @@ class FrameDataMeter(ctk.CTkFrame):
         )
         s.canvas.pack(padx = FDM_BORDERW, pady = FDM_BORDERW)
 
-
+        s.p1_colors = [FDM_C_EMPTY] * FDM_WIDTH
+        s.p2_colors = [FDM_C_EMPTY] * FDM_WIDTH
+        s.indices_to_update = set()
 
         s.p1_rectangles = []
         s.p2_rectangles = []
@@ -186,6 +189,8 @@ class FrameDataMeter(ctk.CTkFrame):
             )
             s.p2_rectangles.append(rect2)
 
+        s.fdm_update()
+        s.update_FDM_UI()
         # end __init__()
 
 
@@ -195,7 +200,7 @@ class FrameDataMeter(ctk.CTkFrame):
             s.go()
 
         except Exception as error:
-            print(f"Memory read failed in FrameDataMeter(): {error}")
+            print(f"Memory read failed in FrameDataMeter().fdm_update(): {error}")
 
         finally:
             new_time = time.perf_counter()
@@ -218,14 +223,9 @@ class FrameDataMeter(ctk.CTkFrame):
                 if self.to_reset:
                     self.reset_fdm()
 
-                self.canvas.itemconfigure(
-                    self.p1_rectangles[self.index],
-                    fill = p1_color
-                )
-                self.canvas.itemconfigure(
-                    self.p2_rectangles[self.index],
-                    fill = p2_color
-                )
+                self.p1_colors[self.index] = p1_color
+                self.p2_colors[self.index] = p2_color
+                self.indices_to_update.add(self.index)
 
                 self.index = self.index + 1
                 if self.index >= FDM_WIDTH:
@@ -234,24 +234,38 @@ class FrameDataMeter(ctk.CTkFrame):
             else:
                 self.to_reset = True
 
-            self.canvas.itemconfigure(
-                self.p1_rectangles[self.index],
-                fill = FDM_C_NEXT
-            )
-            self.canvas.itemconfigure(
-                self.p2_rectangles[self.index],
-                fill = FDM_C_NEXT
-            )
-            self.canvas.itemconfigure(
-                self.p1_rectangles[(self.index + 1) % FDM_WIDTH],
-                fill = FDM_C_EMPTY
-            )
-            self.canvas.itemconfigure(
-                self.p2_rectangles[(self.index + 1) % FDM_WIDTH],
-                fill = FDM_C_EMPTY
-            )
+            self.color_next_frames()
 
         # end go()
+
+    def color_next_frames(self): # Colors the next frame's square, and resets the frame after that's square.
+        self.p1_colors[self.index] = FDM_C_NEXT
+        self.p2_colors[self.index] = FDM_C_NEXT
+        self.p1_colors[(self.index + 1) % FDM_WIDTH] = FDM_C_EMPTY
+        self.p2_colors[(self.index + 1) % FDM_WIDTH] = FDM_C_EMPTY
+        self.indices_to_update.add(self.index)
+        self.indices_to_update.add((self.index + 1) % FDM_WIDTH)
+
+    def update_FDM_UI(self):
+        try:
+            for i in self.indices_to_update:
+                self.canvas.itemconfigure(
+                    self.p1_rectangles[i],
+                    fill = self.p1_colors[i]
+                )
+                self.canvas.itemconfigure(
+                    self.p2_rectangles[i],
+                    fill = self.p2_colors[i]
+                )
+
+            self.indices_to_update = set()
+
+        except Exception as error:
+            print(f"Memory read failed in FrameDataMeter.update_FDM_UI(): {error}")
+
+        finally:
+            self.after(REFRESH_MS, self.update_FDM_UI)
+        # end update_FDM_UI
 
     def update_squares(self, player1, i, un):
 
@@ -274,17 +288,10 @@ class FrameDataMeter(ctk.CTkFrame):
 
     def reset_fdm(self):
         self.index = 0
-        for i in range(FDM_WIDTH):
-            self.canvas.itemconfigure(
-                self.p1_rectangles[i],
-                fill = FDM_C_EMPTY
-            )
-        for i in range(FDM_WIDTH):
-            self.canvas.itemconfigure(
-                self.p2_rectangles[i],
-                fill = FDM_C_EMPTY
-            )
+        self.p1_colors = [FDM_C_EMPTY] * FDM_WIDTH
+        self.p2_colors = [FDM_C_EMPTY] * FDM_WIDTH
         self.to_reset = False
+        self.indices_to_update.update(range(FDM_WIDTH))
 
     def updates_needed(s): # Based on the MISCTIMER, how many updates need to happen?
         clock = math.floor(g_int_1b(a.MISCTIMER))
@@ -350,7 +357,6 @@ class Overlay(ctk.CTk):
     def make_fdm(s):
         s.fdm = FrameDataMeter(s)
         s.fdm.pack(side = "bottom", pady = FDM_HEIGHT)
-        s.fdm.fdm_update()
 
     def make_GRD_display(s):
         s.GD_frame1 = ctk.CTkFrame(s, fg_color = "transparent")
