@@ -60,7 +60,7 @@ FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 # These may be also changed, but be careful
 REFRESH_MS = 32 # UI Frame Rate (milliseconds per refresh)
-FDM_REFRESH_MS = 15 # Same but for FrameDataMeter
+FDM_REFRESH_MS = 10 # Same but for FrameDataMeter
 WINDOW_RESOLUTION = "1920x1080"
 WINDOW_MINSIZE = [320, 240]
 WINDOW_DRAGGABLE = False # Whether window is draggable; this disables transparency and auto-snapping
