@@ -9,6 +9,8 @@ from enum import Enum
 import win32gui as wg # pyright: ignore[reportMissingModuleSource]
 import time
 import threading
+import ctypes
+from ctypes import wintypes
 
 
 # THESE VARIABLES MAY BE CHANGED
@@ -61,7 +63,7 @@ FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 # These may be also changed, but be careful
 REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
-FDM_REFRESH_MS = 10 # Same but for FrameDataMeter (runs on a separate thread)
+FDM_REFRESH_MS = 14 # Same but for FrameDataMeter (runs on a separate thread)
 WINDOW_RESOLUTION = "1920x1080"
 WINDOW_MINSIZE = [320, 240]
 WINDOW_DRAGGABLE = False # Whether window is draggable; this disables transparency and auto-snapping
@@ -88,6 +90,69 @@ i = -1 # Label indexing
 
 
 
+kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+CREATE_WAITABLE_TIMER_HIGH_RESOLUTION = 0x00000002
+TIMER_ALL_ACCESS = 0x001F0003
+WAIT_OBJECT_0 = 0
+WAIT_FAILED = 0xFFFFFFFF
+
+kernel32.CreateWaitableTimerExW.restype = wintypes.HANDLE
+kernel32.CreateWaitableTimerExW.argtypes = [
+    wintypes.LPVOID,
+    wintypes.LPCWSTR,
+    wintypes.DWORD,
+    wintypes.DWORD,
+]
+
+kernel32.SetWaitableTimer.argtypes = [
+    wintypes.HANDLE,
+    ctypes.POINTER(ctypes.c_longlong),
+    wintypes.LONG,
+    wintypes.LPVOID,
+    wintypes.LPVOID,
+    wintypes.BOOL,
+]
+kernel32.SetWaitableTimer.restype = wintypes.BOOL
+
+kernel32.WaitForSingleObject.argtypes = [
+    wintypes.HANDLE,
+    wintypes.DWORD,
+]
+kernel32.WaitForSingleObject.restype = wintypes.DWORD
+
+kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+kernel32.CloseHandle.restype = wintypes.BOOL
+
+def create_high_res_timer():
+    timer = kernel32.CreateWaitableTimerExW(
+        None, None,
+        CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+        TIMER_ALL_ACCESS,
+    )
+    if not timer:
+        raise ctypes.WinError(ctypes.get_last_error())
+    return timer
+
+
+def wait_until(timer, deadline):
+    remaining = deadline - time.perf_counter()
+    if remaining <= 0:
+        return
+
+    # Windows timer due times are in 100-nanosecond units.
+    due_time = ctypes.c_longlong(-max(1, int(remaining * 10_000_000)))
+
+    if not kernel32.SetWaitableTimer(
+        timer, ctypes.byref(due_time), 0, None, None, False
+    ):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    result = kernel32.WaitForSingleObject(timer, 0xFFFFFFFF)
+    if result == WAIT_FAILED:
+        raise ctypes.WinError(ctypes.get_last_error())
+    if result != WAIT_OBJECT_0:
+        raise RuntimeError(f"Unexpected timer wait result: {result}")
 
 
 
@@ -205,23 +270,27 @@ class FrameDataMeter(ctk.CTkFrame):
 
     def collect_data(s):
         interval = FDM_REFRESH_MS / 1000.0
+        timer = create_high_res_timer()
         next_time = time.perf_counter()
 
-        while not s.stop_event.is_set():
-            try:
-                with s.data_lock:
-                    s.go()
+        try:
+            while not s.stop_event.is_set():
+                try:
+                    with s.data_lock:
+                        s.go()
+                except Exception as error:
+                    print(f"ERR in FrameDataMeter.collect_data(): {error}")
 
-            except Exception as error:
-                print(f"ERR in FrameDataMeter.collect_data(): {error}")
+                next_time += interval
+                wait_until(timer, next_time)
 
-            next_time = next_time + interval
-            remaining = next_time - time.perf_counter()
+                end = time.perf_counter()
 
-            if remaining > 0:
-                s.stop_event.wait(remaining)
-            else:
-                next_time = time.perf_counter()
+                # Avoid attempting to catch up after a long delay.
+                if end >= next_time + interval:
+                    next_time = end
+        finally:
+            kernel32.CloseHandle(timer)
 
     def fdm_update(s):
 
