@@ -7,6 +7,7 @@ import pymem.process
 import math
 from enum import Enum
 import win32gui as wg # pyright: ignore[reportMissingModuleSource]
+import time
 
 
 # THESE VARIABLES MAY BE CHANGED
@@ -58,8 +59,8 @@ FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 
 # These may be also changed, but be careful
-REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
-FDM_REFRESH_MS = 9 # Same but for FrameDataMeter
+REFRESH_MS = 32 # UI Frame Rate (milliseconds per refresh)
+FDM_REFRESH_MS = 15 # Same but for FrameDataMeter
 WINDOW_RESOLUTION = "1920x1080"
 WINDOW_MINSIZE = [320, 240]
 WINDOW_DRAGGABLE = False # Whether window is draggable; this disables transparency and auto-snapping
@@ -144,6 +145,7 @@ class FrameDataMeter(ctk.CTkFrame):
         s.index = 0
         s.to_reset = False
         s.last_clock = g_int(a.MISCTIMER)
+        s.utime = time.perf_counter() # used for timing the meter, so it updates as close to every frame as possible
 
         s.canvas = tk.Canvas(
             s,
@@ -188,6 +190,7 @@ class FrameDataMeter(ctk.CTkFrame):
 
 
     def fdm_update(s):
+
         try:
             s.go()
 
@@ -195,7 +198,11 @@ class FrameDataMeter(ctk.CTkFrame):
             print(f"Memory read failed in FrameDataMeter(): {error}")
 
         finally:
-            s.after(FDM_REFRESH_MS, s.fdm_update) #Run again on the next interval defined by REFRESH_MS
+            new_time = time.perf_counter()
+            elapsed_time = new_time - s.utime
+            s.utime = new_time
+
+            s.after(math.floor(max(1, FDM_REFRESH_MS - elapsed_time * 1000)), s.fdm_update)
 
     def go(self): # Read all relevant values and update the frame data meter accordingly.
         un = self.updates_needed()
@@ -247,32 +254,23 @@ class FrameDataMeter(ctk.CTkFrame):
         # end go()
 
     def update_squares(self, player1, i, un):
-        skip = True
-        color = FDM_C_EMPTY
-        if (i < un - 1) and not (self.to_reset):
-            color = FDM_C_SKIPPED
-            skip = False
-        elif g_int_1b(a.ST1_INVINC if player1 else a.ST2_INVINC) == 0:
-            color = FDM_C_INVINCIBLE
-            skip = False
-        elif g_int_1b(a.ST1_ACTIVE if player1 else a.ST2_ACTIVE) != 0:
-            color = FDM_C_ACTIVE
-            skip = False
-        elif g_int(a.ST1_ATTACKING if player1 else a.ST2_ATTACKING) > 0:
-            color = FDM_C_ATK
-            skip = False
-        elif g_int(a.ST1_STUN_T if player1 else a.ST2_STUN_T) != 0:
-            color = FDM_C_STUN
-            skip = False
-        elif g_int_1b(a.ST1_BUSY if player1 else a.ST2_BUSY) > 0:
-            color = FDM_C_BUSY
-            skip = False
-        elif g_int_1b(a.ST1_AIRBORNE if player1 else a.ST2_AIRBORNE) != 0:
-            color = FDM_C_AIRBORNE
-        else:
-            color = FDM_C_ADV
 
-        return [color, skip]
+        if (i < un - 1) and not (self.to_reset):
+            return [FDM_C_SKIPPED, False]
+        elif g_int_1b(a.ST1_INVINC if player1 else a.ST2_INVINC) == 0:
+            return [FDM_C_INVINCIBLE, False]
+        elif g_int_1b(a.ST1_ACTIVE if player1 else a.ST2_ACTIVE) != 0:
+            return [FDM_C_ACTIVE, False]
+        elif g_int(a.ST1_ATTACKING if player1 else a.ST2_ATTACKING) > 0:
+            return [FDM_C_ATK, False]
+        elif g_int(a.ST1_STUN_T if player1 else a.ST2_STUN_T) != 0:
+            return [FDM_C_STUN, False]
+        elif g_int_1b(a.ST1_BUSY if player1 else a.ST2_BUSY) > 0:
+            return [FDM_C_BUSY, False]
+        elif g_int_1b(a.ST1_AIRBORNE if player1 else a.ST2_AIRBORNE) != 0:
+            return [FDM_C_AIRBORNE, True]
+        else:
+            return [FDM_C_ADV, True]
 
     def reset_fdm(self):
         self.index = 0
