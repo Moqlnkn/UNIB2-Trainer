@@ -8,6 +8,7 @@ import math
 from enum import Enum
 import win32gui as wg # pyright: ignore[reportMissingModuleSource]
 import time
+import threading
 
 
 # THESE VARIABLES MAY BE CHANGED
@@ -60,8 +61,7 @@ FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 # These may be also changed, but be careful
 REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
-FDM_REFRESH_MS = 10 # Same but for FrameDataMeter
-# 10: 1001 1000 2000 0000 1000 1000 0000
+FDM_REFRESH_MS = 10 # Same but for FrameDataMeter (runs on a separate thread)
 WINDOW_RESOLUTION = "1920x1080"
 WINDOW_MINSIZE = [320, 240]
 WINDOW_DRAGGABLE = False # Whether window is draggable; this disables transparency and auto-snapping
@@ -131,7 +131,7 @@ class Addresses:
 
 a = Addresses()
 
-
+#def update_address_values(): TODO
 
 
 
@@ -189,10 +189,39 @@ class FrameDataMeter(ctk.CTkFrame):
             )
             s.p2_rectangles.append(rect2)
 
-        s.fdm_update()
+        s.data_lock = threading.Lock()
+        s.stop_event = threading.Event()
+        s.indices_to_update = set()
+
+        s.worker = threading.Thread(
+            target = s.collect_data,
+            daemon=True
+        )
+        s.worker.start()
+
         s.update_FDM_UI()
+
         # end __init__()
 
+    def collect_data(s):
+        interval = FDM_REFRESH_MS / 1000.0
+        next_time = time.perf_counter()
+
+        while not s.stop_event.is_set():
+            try:
+                with s.data_lock:
+                    s.go()
+
+            except Exception as error:
+                print(f"ERR in FrameDataMeter.collect_data(): {error}")
+
+            next_time = next_time + interval
+            remaining = next_time - time.perf_counter()
+
+            if remaining > 0:
+                s.stop_event.wait(remaining)
+            else:
+                next_time = time.perf_counter()
 
     def fdm_update(s):
 
@@ -239,26 +268,31 @@ class FrameDataMeter(ctk.CTkFrame):
         # end go()
 
     def color_next_frames(self): # Colors the next frame's square, and resets the frame after that's square.
-        self.p1_colors[self.index] = FDM_C_NEXT
-        self.p2_colors[self.index] = FDM_C_NEXT
-        self.p1_colors[(self.index + 1) % FDM_WIDTH] = FDM_C_EMPTY
-        self.p2_colors[(self.index + 1) % FDM_WIDTH] = FDM_C_EMPTY
-        self.indices_to_update.add(self.index)
-        self.indices_to_update.add((self.index + 1) % FDM_WIDTH)
+        next_index = self.index
+        after_next = (self.index + 1) % FDM_WIDTH
+
+        self.p1_colors[next_index] = FDM_C_NEXT
+        self.p2_colors[next_index] = FDM_C_NEXT
+        self.p1_colors[after_next] = FDM_C_EMPTY
+        self.p2_colors[after_next] = FDM_C_EMPTY
+        self.indices_to_update.add(next_index)
+        self.indices_to_update.add(after_next)
 
     def update_FDM_UI(self):
         try:
-            for i in self.indices_to_update:
-                self.canvas.itemconfigure(
-                    self.p1_rectangles[i],
-                    fill = self.p1_colors[i]
-                )
-                self.canvas.itemconfigure(
-                    self.p2_rectangles[i],
-                    fill = self.p2_colors[i]
-                )
 
-            self.indices_to_update = set()
+            with self.data_lock:
+                indices = self.indices_to_update.copy()
+                self.indices_to_update.clear()
+
+                updates = [
+                    (i, self.p1_colors[i], self.p2_colors[i])
+                    for i in indices
+                ]
+
+            for i, p1_color, p2_color in updates:
+                self.canvas.itemconfigure(self.p1_rectangles[i], fill = p1_color)
+                self.canvas.itemconfigure(self.p2_rectangles[i], fill = p2_color)
 
         except Exception as error:
             print(f"Memory read failed in FrameDataMeter.update_FDM_UI(): {error}")
