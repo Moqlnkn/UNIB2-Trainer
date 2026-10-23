@@ -199,12 +199,10 @@ class FrameDataMeter(ctk.CTkFrame):
 
         finally:
             new_time = time.perf_counter()
-            s.utime += FDM_REFRESH_MS / 1000
+            elapsed_time = new_time - s.utime
+            s.utime = new_time
 
-            if (s.utime <= new_time):
-                s.utime = new_time + FDM_REFRESH_MS / 1000
-
-            s.after(math.ceil(max(1, (s.utime - new_time) * 1000)), s.fdm_update)
+            s.after(math.floor(max(1, FDM_REFRESH_MS - elapsed_time * 1000)), s.fdm_update)
 
     def go(self): # Read all relevant values and update the frame data meter accordingly.
         un = self.updates_needed()
