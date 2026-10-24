@@ -1,0 +1,18 @@
+~ 23 Oct 2026
+Okay, I finally added a changelog! The primary purpose of this document is to keep my thoughts straight as I work.
+
+~ 24 Oct 2026
+Frame Counter
+Multithreading fix
+
+
+
+Current Focus
+* Look at other frame data meters for inspiration
+* FDM_FONT_YOFFSET is slightly jank
+
+Long-Term Problems
+* X- and Y-Position (yuck!)
+
+Known Bugs
+* 
