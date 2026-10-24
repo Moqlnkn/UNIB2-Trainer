@@ -5,6 +5,7 @@ from pathlib import Path
 import pymem
 import pymem.process
 import math
+import win32event
 import win32gui as wg # pyright: ignore[reportMissingModuleSource]
 import time
 import threading
@@ -66,6 +67,7 @@ FDM_C_ACTIVE        = "#FF0000" # Active Frames
 
 
 # These may be also changed, but be careful
+APP_CLOSE_CHECK_MS = 1000 # Check if should auto-close because the game is closed every this-many milliseconds
 FDM_TEXT_OUTLINE_WIDTH = 1 # Looks pretty bad with values greater than 1.
 REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
 FDM_REFRESH_MS = 14 # Same but for FrameDataMeter (runs on a separate thread)
@@ -139,7 +141,10 @@ def wait_until(timer, deadline):
         raise RuntimeError(f"Unexpected timer wait result: {result}")
 # !!! VOODOO MAGIC ZONE END !!!
 
-
+# The app automatically closes if the game is not running
+def game_is_running(pm):
+    result = win32event.WaitForSingleObject(pm.process_handle, 0)
+    return result == win32event.WAIT_TIMEOUT
 
 # Auto-snapping
 if not wg.FindWindow(None, WINDOW_NAME):
@@ -373,6 +378,11 @@ class FrameDataMeter(ctk.CTkFrame):
         s.p2_colors[after_next] = FDM_C_EMPTY
         s.indices_to_update.add(next_index)
         s.indices_to_update.add(after_next)
+
+    def stop_worker(s): # Close this when the game closes
+        s.stop_event.set()
+        if s.worker.is_alive():
+            s.worker.join(timeout=1.0)
 
     def update_FDM_UI(s):
         try:
@@ -685,6 +695,13 @@ class Overlay(ctk.CTk):
         finally:
             s.after(REFRESH_MS, s.overlay_update) #Run again on the next interval defined by REFRESH_MS
 
+    def check_game_process(s):
+            if not game_is_running(pm):
+                s.fdm.stop_worker()
+                s.destroy()
+                return
+            s.after(APP_CLOSE_CHECK_MS, s.check_game_process)
+
 
 # Get a value from memory
 def g_int   (get): # 4 byte integer
@@ -777,4 +794,5 @@ def next(s):
 
 if __name__ == "__main__":
     app = Overlay()
+    app.check_game_process()
     app.mainloop()
