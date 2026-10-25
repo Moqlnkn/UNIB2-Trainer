@@ -5,18 +5,46 @@ Okay, I finally added a changelog! The primary purpose of this document is to ke
 Frame Counter
 Multithreading fix
 Auto-Close on game close
+MISCTIMER changed
 
 
+
+SF6 FDM
+Startup #F / Total #F / Advantage (#F) (colored blue if positive, red if negative, white if even)
+~
+~
+Startup -- / Total -- / Advantage
+
+SF6 FDM Colors:
+Green = Counter-Hittable (startup)
+Blue = Punish-Counterable (recovery)
+Cyan = Non-Counterable (dashes, jumps, etc)
+Red = Active
+Orange = Active projectile
+Purple = Parrying
+Yellow = Hitstun/Blockstun
+Gray w/white stripes = Full Invincible
+Red w/white stripes = Strike+Throw Invincible (Level 1 Supers)
+Orange w/white stripes = Projectile Invincible
+Red(top) Orange(bot) w/white stripes = Strike/Projectile Invincible
+
+SF6 Data Display
+# (#%)      Damage	# (#%)
+# (max) Combo  Damage	# (max)
+--       Attack Type	--
+
+SF6 differences
+Jumping is shown
+To avoid too much color duping, invincibilities are separated as colored stripes on top of the colored square
 
 Current Focus
-* Look at other frame data meters for inspiration
-* Auto-close when the game closes
-* FDM_FONT_YOFFSET is slightly jank
+* Backdash Invincibility
 * Throw-invincibility, Strike-invincibility, Projectile-invincibility
 * Hitstop
+* Hide when game not in front
 
 Long-Term Problems
 * X- and Y-Position (yuck!)
 
 Known Bugs
-* 
+* FDM_FONT_YOFFSET is slightly jank, I just keep it at 0 anyway

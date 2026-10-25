@@ -14,12 +14,13 @@ from ctypes import wintypes
 
 
 
-# THESE VARIABLES MAY BE CHANGED
+
 
 JSON_FILENAME = "UNIB2.json" # Rename this if using a different json file; it must be in the same folder as this app
 WINDOW_TITLE = "UNIB2 Trainer" # Rename this app's window (has no effect whatsoever)
 WINDOW_ALPHA = 0.8 # The app's transparency (0 = invisible, 1 = opaque)
 
+# Element Positioning
 # top of screen
 HD_HEIGHT = 125 # HP Display height below top of screen
 # ----- middle of screen -----
@@ -35,6 +36,7 @@ HD_FONT = ("Times New Roman", 32, "bold")
 GD_SPACING = 380 # Distance between GRD values and the center of the screen
 GD_FONT = ("Times New Roman", 32, "bold")
 
+# Frame Data Meter
 FDM_WIDTH = 120 # IMPORTANT: Number of squares per Frame Data Meter row; one square per frame
 FDM_SQWIDTH = 14 # Pixel-width of each square
 FDM_SQHEIGHT = 23 # Pixel-height of each square
@@ -51,20 +53,18 @@ FDM_OVERRIDE_BUFFER = 3 # As the meter draws over itself, text fields up to this
 FDM_HCOLOR = "#30179E" # Outline Color
 FDM_BG = "#1A1A1A" # Background Color
 
+# Frame Data Meter Colors
 FDM_C_NEXT          = "#A5A0A0" # Color of the NEXT frame, overriding previous color
 FDM_C_EMPTY         = "#4B4B4B" # Color of empty squares
 FDM_C_STUN          = "#990000" # Hitstun/Blockstun
 FDM_C_ATK           = "#0DE76F" # Attacking
 FDM_C_ADV           = "#1493B9" # At neutral while other is not
 FDM_C_INVINCIBLE    = "#F1F1F1" # Invincible
+FDM_C_PINVINCIBLE   = "#FF7700" # Projectile Invincible
 FDM_C_SKIPPED       = "#5F130B" # This frame was skipped due to lag, so actual data is unknown
 FDM_C_AIRBORNE      = "#FFFF00" # Jumping
 FDM_C_BUSY          = "#682662" # Not neutral, attacking, or getting hit; Backdash, Assault, etc
 FDM_C_ACTIVE        = "#FF0000" # Active Frames
-
-
-
-
 
 # These may be also changed, but be careful
 APP_CLOSE_CHECK_MS = 1000 # Check if should auto-close because the game is closed every this-many milliseconds
@@ -86,18 +86,15 @@ LABEL_PAD = (0, 0)
 
 
 # Probably never change these
-EXECUTABLE_NAME = "uni2.exe"
-WINDOW_NAME = "UNDER NIGHT IN-BIRTH II Sys:Celes"
-pm = pymem.Pymem(EXECUTABLE_NAME)
+EXECUTABLE_NAME = "uni2.exe" # This ABSOLUTELY MUST be accurate
+WINDOW_NAME = "UNDER NIGHT IN-BIRTH II Sys:Celes" # This MUST be accurate for app snapping to work
+pm = pymem.Pymem(EXECUTABLE_NAME) # PyMem is how the app reads from RAM
 module =  pymem.process.module_from_name(pm.process_handle, EXECUTABLE_NAME)
-base_address = module.lpBaseOfDll
-l = [] # Labels
-i = -1 # Label indexing
+base_address = module.lpBaseOfDll # Starting address of the game application, memory offsets add to this
+l = [] # Labels for debugging
+i = -1 # Label indexing for debugging
 
-
-
-
-# !!! VOODOO MAGIC ZONE - HANDLE WITH CAUTION !!!
+# !!! VOODOO MAGIC ZONE - HANDLE WITH EXTREME CAUTION !!!
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 kernel32.CreateWaitableTimerExW.restype = wintypes.HANDLE
 kernel32.CreateWaitableTimerExW.argtypes = [
@@ -151,17 +148,13 @@ if not wg.FindWindow(None, WINDOW_NAME):
     print("Window Not Found! Auto-snapping requires the game to be open with its default name.")
     WINDOW_DRAGGABLE = True
 
-
-
 # Store all addresses in a unique class and call it "a" (read from JSON file)
-
 def convert_address(value):
     if isinstance(value, str):
-        return int(value, 0)
+        return int(value, 16)
     if isinstance(value, list):
         return [convert_address(item) for item in value]
-    return value
-
+    return int(value, 16)
 class Addresses:
     def __init__(s, filename = JSON_FILENAME):
 
@@ -183,15 +176,12 @@ class Addresses:
             raise AttributeError(
                 f"Address {name} not found in JSON file!"
             ) from None
-
 a = Addresses()
 
 
 
 
-# Frame Data Meter
-
-class FrameDataMeter(ctk.CTkFrame):
+class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
 
     def __init__(s, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -307,13 +297,16 @@ class FrameDataMeter(ctk.CTkFrame):
             p1 = s.update_squares(True, i, un)
             p2 = s.update_squares(False, i, un)
 
-            this_index = s.index
-
             p1_color = p1[0]
             p2_color = p2[0]
             skip = p1[1] and p2[1]
 
             if not skip:
+
+                if s.to_reset:
+                    s.reset_fdm()
+
+                this_index = s.index
 
                 s.invalidate_texts_at_index(this_index)
 
@@ -357,9 +350,6 @@ class FrameDataMeter(ctk.CTkFrame):
                         s.p1_last_color = color
                     else:
                         s.p2_last_color = color
-
-                if s.to_reset:
-                    s.reset_fdm()
 
             else:
                 s.to_reset = True
@@ -488,6 +478,8 @@ class FrameDataMeter(ctk.CTkFrame):
             return [FDM_C_SKIPPED, False]
         elif g_int_1b(a.ST1_INVINC if player1 else a.ST2_INVINC) == 0:
             return [FDM_C_INVINCIBLE, False]
+        elif g_int_1b(a.ST1_PINVINC if player1 else a.ST2_PINVINC) != 0:
+            return [FDM_C_PINVINCIBLE, False]
         elif g_int_1b(a.ST1_ACTIVE if player1 else a.ST2_ACTIVE) != 0:
             return [FDM_C_ACTIVE, False]
         elif g_int(a.ST1_ATTACKING if player1 else a.ST2_ATTACKING) > 0:
@@ -533,16 +525,13 @@ class FrameDataMeter(ctk.CTkFrame):
             s.reset_fdm()
             result = 1
         return result
+# end FrameDataMeter()
 
 
 
 
 
-
-
-# Data Overlay (top right)
-
-class Overlay(ctk.CTk):
+class Overlay(ctk.CTk): # Data Overlay (top right)
 
     def __init__(s):
         super().__init__()
@@ -651,7 +640,7 @@ class Overlay(ctk.CTk):
             next(s).configure(text = f"Advantage: {val1}")
 
             # P1 Attacking
-            val1 = g_int(a.ST1_ATTACKING)
+            val1 = g_int(a.ST2_ATTACKING)
             next(s).configure(text = f"Attacking: {val1}")
 
         #end update_labels
@@ -701,53 +690,26 @@ class Overlay(ctk.CTk):
                 s.destroy()
                 return
             s.after(APP_CLOSE_CHECK_MS, s.check_game_process)
+# end Overlay()
+
+
+
 
 
 # Get a value from memory
 def g_int   (get): # 4 byte integer
     offsets = get[1] if len(get) > 1 else []
-    base_offset = get[0]
-    address = base_address + base_offset
+    address = base_address + get[0]
     for o in offsets:
         address = pm.read_longlong(address) + o
     return pm.read_int(address)
 def g_int_1b(get): # 1 byte integer
     offsets = get[1] if len(get) > 1 else []
-    base_offset = get[0]
-    address = base_address + base_offset
+    address = base_address + get[0]
     for o in offsets:
         address = pm.read_longlong(address) + o
     return pm.read_uchar(address)
-def g_int_2b(get): # 2 byte integer
-    offsets = get[1] if len(get) > 1 else []
-    base_offset = get[0]
-    address = base_address + base_offset
-    for o in offsets:
-        address = pm.read_longlong(address) + o
-    return pm.read_short(address)
-def g_int_8b(get): # 8 byte integer
-    offsets = get[1] if len(get) > 1 else []
-    base_offset = get[0]
-    address = base_address + base_offset
-    for o in offsets:
-        address = pm.read_longlong(address) + o
-    return pm.read_longlong(address)
-def g_float (get): # float
-    offsets = get[1] if len(get) > 1 else []
-    base_offset = get[0]
-    address = base_address + base_offset
-    for o in offsets:
-        address = pm.read_longlong(address) + o
-    return pm.read_float(address)
-def g_double(get): # double
-    offsets = get[1] if len(get) > 1 else []
-    base_offset = get[0]
-    address = base_address + base_offset
-    for o in offsets:
-        address = pm.read_longlong(address) + o
-    return pm.read_double(address)
 
-    
 def get_char_name(integer_val): # Get a character's name based on their char index (0 -> "Hyde", etc.)
     match integer_val:
         case 0: return "Hyde"
@@ -779,19 +741,21 @@ def get_char_name(integer_val): # Get a character's name based on their char ind
         case 14: return "Akatsuki"
     return "ERR IN GET_CHAR_NAME"
 
-
-def nl(s): # New Label
+def nl(s): # New Label, used for debugging
         result = ctk.CTkLabel(s)
         result.pack(pady=(LABEL_PAD), anchor = "e")
         result.configure(text = "", font = LABEL_FONT)
         return result
 
-def next(s):
+def next(s): # Next Label, used for debugging
     s.i = s.i + 1
     return s.l[s.i]
 
 
 
+
+
+# Main Thread
 if __name__ == "__main__":
     app = Overlay()
     app.check_game_process()
