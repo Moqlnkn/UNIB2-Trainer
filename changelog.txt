@@ -7,6 +7,9 @@ Multithreading fix
 Auto-Close on game close
 MISCTIMER changed
 
+~ 26 Oct 2026
+Colored Invincibility Bands
+
 
 
 SF6 FDM

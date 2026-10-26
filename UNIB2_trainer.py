@@ -40,6 +40,7 @@ GD_FONT = ("Times New Roman", 32, "bold")
 FDM_WIDTH = 120 # IMPORTANT: Number of squares per Frame Data Meter row; one square per frame
 FDM_SQWIDTH = 14 # Pixel-width of each square
 FDM_SQHEIGHT = 23 # Pixel-height of each square
+FDM_BANDHEIGHT = 7 # Pixel-height of each invincibility band; keep same even/odd parity as FDM_SQHEIGHT
 FDM_YPAD = 5 # Pixels between top and bottom bars
 FDM_XPAD = 1 # Pixels between each square in a row
 FDM_BORDERW = 7 # Border width around the Meter
@@ -59,12 +60,15 @@ FDM_C_EMPTY         = "#4B4B4B" # Color of empty squares
 FDM_C_STUN          = "#990000" # Hitstun/Blockstun
 FDM_C_ATK           = "#0DE76F" # Attacking
 FDM_C_ADV           = "#1493B9" # At neutral while other is not
-FDM_C_INVINCIBLE    = "#F1F1F1" # Invincible
-FDM_C_PINVINCIBLE   = "#FF7700" # Projectile Invincible
 FDM_C_SKIPPED       = "#5F130B" # This frame was skipped due to lag, so actual data is unknown
 FDM_C_AIRBORNE      = "#FFFF00" # Jumping
 FDM_C_BUSY          = "#682662" # Not neutral, attacking, or getting hit; Backdash, Assault, etc
 FDM_C_ACTIVE        = "#FF0000" # Active Frames
+
+# Invincibility Colors
+FDM_B_NOTINVINCIBLE = "" # Not Invincible
+FDM_B_INVINCIBLE    = "#F1F1F1" # Invincible
+FDM_B_PINVINCIBLE   = "#FF7700" # Projectile Invincible
 
 # These may be also changed, but be careful
 APP_CLOSE_CHECK_MS = 1000 # Check if should auto-close because the game is closed every this-many milliseconds
@@ -203,10 +207,14 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
 
         s.p1_colors = [FDM_C_EMPTY] * FDM_WIDTH
         s.p2_colors = [FDM_C_EMPTY] * FDM_WIDTH
+        s.p1_icolors = [FDM_B_NOTINVINCIBLE] * FDM_WIDTH
+        s.p2_icolors = [FDM_B_NOTINVINCIBLE] * FDM_WIDTH
         s.indices_to_update = set()
 
         s.p1_rectangles = []
         s.p2_rectangles = []
+        s.p1_irectangles = []
+        s.p2_irectangles = []
 
         for i in range(FDM_WIDTH): # Frame Data Meter
             x = i * (FDM_SQWIDTH + FDM_XPAD)
@@ -219,6 +227,7 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
                 outline = ""
             )
             s.p1_rectangles.append(rect1)
+
             rect2 = s.canvas.create_rectangle(
                 x, # Left
                 FDM_SQHEIGHT + FDM_YPAD, # Top
@@ -228,6 +237,27 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
                 outline = ""
             )
             s.p2_rectangles.append(rect2)
+            x = i * (FDM_SQWIDTH + FDM_XPAD)
+
+            i_rect1 = s.canvas.create_rectangle(
+                x, # Left
+                (FDM_SQHEIGHT / 2) - (FDM_BANDHEIGHT / 2), # Top
+                x + FDM_SQWIDTH, # Right
+                (FDM_SQHEIGHT / 2) + (FDM_BANDHEIGHT / 2), # Bot
+                fill = FDM_C_EMPTY,
+                outline = ""
+            )
+            s.p1_irectangles.append(i_rect1)
+
+            i_rect2 = s.canvas.create_rectangle(
+                x, # Left
+                FDM_SQHEIGHT + FDM_YPAD + (FDM_SQHEIGHT / 2) - (FDM_BANDHEIGHT / 2), # Top
+                x + FDM_SQWIDTH, # Right
+                FDM_SQHEIGHT + FDM_YPAD + (FDM_SQHEIGHT / 2) + (FDM_BANDHEIGHT / 2), # Bot
+                fill = FDM_C_EMPTY,
+                outline = ""
+            )
+            s.p2_irectangles.append(i_rect2)
 
         s.text_count = math.ceil(FDM_WIDTH / FDM_TEXTMIN)
         s.texts_to_hide = []
@@ -299,6 +329,8 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
 
             p1_color = p1[0]
             p2_color = p2[0]
+            p1_icolor = p1[2]
+            p2_icolor = p2[2]
             skip = p1[1] and p2[1]
 
             if not skip:
@@ -312,6 +344,8 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
 
                 s.p1_colors[this_index] = p1_color
                 s.p2_colors[this_index] = p2_color
+                s.p1_icolors[this_index] = p1_icolor
+                s.p2_icolors[this_index] = p2_icolor
                 s.indices_to_update.add(this_index)
 
                 s.index = this_index + 1
@@ -379,16 +413,15 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
             with s.data_lock:
                 indices = s.indices_to_update.copy()
                 s.indices_to_update.clear()
-
                 updates = [
-                    (i, s.p1_colors[i], s.p2_colors[i])
+                    (i, s.p1_colors[i], s.p2_colors[i], s.p1_icolors[i], s.p2_icolors[i])
                     for i in indices
                 ]
-
-            for i, p1_color, p2_color in updates:
+            for i, p1_color, p2_color, p1_icolor, p2_icolor in updates:
                 s.canvas.itemconfigure(s.p1_rectangles[i], fill = p1_color)
                 s.canvas.itemconfigure(s.p2_rectangles[i], fill = p2_color)
-
+                s.canvas.itemconfigure(s.p1_irectangles[i], fill=p1_icolor)
+                s.canvas.itemconfigure(s.p2_irectangles[i], fill=p2_icolor)
             s.update_texts()
 
         except Exception as error:
@@ -472,31 +505,40 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
                     s.canvas.itemconfig(item, state="hidden")
                 s.canvas.itemconfig(text["main"], state="hidden")
 
-    def update_squares(s, player1, i, un):
+    def update_squares(s, player1, i, un): # Determine square color
 
-        if (i < un - 1) and not (s.to_reset):
-            return [FDM_C_SKIPPED, False]
-        elif g_int_1b(a.ST1_INVINC if player1 else a.ST2_INVINC) == 0:
-            return [FDM_C_INVINCIBLE, False]
+        # Check invincibility separately (small color)
+        is_not_invincible = True
+        invincible_color = FDM_B_NOTINVINCIBLE
+        if g_int_1b(a.ST1_INVINC if player1 else a.ST2_INVINC) == 0:
+            is_not_invincible = False
+            invincible_color = FDM_B_INVINCIBLE
         elif g_int_1b(a.ST1_PINVINC if player1 else a.ST2_PINVINC) != 0:
-            return [FDM_C_PINVINCIBLE, False]
+            is_not_invincible = False
+            invincible_color = FDM_B_PINVINCIBLE
+
+        # Check non-invincibility states (big color)
+        if (i < un - 1) and not (s.to_reset):
+            return [FDM_C_SKIPPED, False, invincible_color]
         elif g_int_1b(a.ST1_ACTIVE if player1 else a.ST2_ACTIVE) != 0:
-            return [FDM_C_ACTIVE, False]
+            return [FDM_C_ACTIVE, False, invincible_color]
         elif g_int(a.ST1_ATTACKING if player1 else a.ST2_ATTACKING) > 0:
-            return [FDM_C_ATK, False]
+            return [FDM_C_ATK, False, invincible_color]
         elif g_int(a.ST1_STUN_T if player1 else a.ST2_STUN_T) != 0:
-            return [FDM_C_STUN, False]
+            return [FDM_C_STUN, False, invincible_color]
         elif g_int_1b(a.ST1_BUSY if player1 else a.ST2_BUSY) > 0:
-            return [FDM_C_BUSY, False]
+            return [FDM_C_BUSY, False, invincible_color]
         elif g_int_1b(a.ST1_AIRBORNE if player1 else a.ST2_AIRBORNE) != 0:
-            return [FDM_C_AIRBORNE, True]
+            return [FDM_C_AIRBORNE, is_not_invincible, invincible_color]
         else:
-            return [FDM_C_ADV, True]
+            return [FDM_C_ADV, is_not_invincible, invincible_color]
 
     def reset_fdm(s):
         s.index = 0
         s.p1_colors = [FDM_C_EMPTY] * FDM_WIDTH
         s.p2_colors = [FDM_C_EMPTY] * FDM_WIDTH
+        s.p1_icolors = [FDM_B_NOTINVINCIBLE] * FDM_WIDTH
+        s.p2_icolors = [FDM_B_NOTINVINCIBLE] * FDM_WIDTH
         s.to_reset = False
         s.indices_to_update.update(range(FDM_WIDTH))
         s.p1_last_color = FDM_C_EMPTY
