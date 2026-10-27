@@ -44,6 +44,7 @@
     "ST1_INVINC"		:["C652E1"],
     "ST1_ACTIVE"		:["C652E0"],
     "ST1_PINVINC"		:["C65B26"],
+    "ST1_COUNTERABLE"		:["C6547C"],
 
     "ST2_BUSY"			:["C66509"],
     "ST2_ATTACKING"		:["C662F4"],
@@ -53,6 +54,7 @@
     "ST2_INVINC"		:["C65EA1"],
     "ST2_ACTIVE"		:["C65EA0"],
     "ST2_PINVINC"		:["C666E6"],
+    "ST2_COUNTERABLE"		:["C6603C"],
 
     "AN1_FSINCE"		:["C65900"],
 

@@ -57,13 +57,14 @@ FDM_BG = "#1A1A1A" # Background Color
 # Frame Data Meter Colors
 FDM_C_NEXT          = "#A5A0A0" # Color of the NEXT frame, overriding previous color
 FDM_C_EMPTY         = "#4B4B4B" # Color of empty squares
-FDM_C_STUN          = "#990000" # Hitstun/Blockstun
-FDM_C_ATK           = "#0DE76F" # Attacking
-FDM_C_ADV           = "#1493B9" # At neutral while other is not
-FDM_C_SKIPPED       = "#5F130B" # This frame was skipped due to lag, so actual data is unknown
-FDM_C_AIRBORNE      = "#FFFF00" # Jumping
+FDM_C_STUN          = "#FBFF08" # Hitstun/Blockstun
+FDM_C_ATK           = "#1B76AA" # Attacking
+FDM_C_ADV           = "#303B3F" # At neutral while other is not
+FDM_C_SKIPPED       = "#460D07" # This frame was skipped due to lag, so actual data is unknown
+FDM_C_AIRBORNE      = "#12E7F7" # Jumping
 FDM_C_BUSY          = "#682662" # Not neutral, attacking, or getting hit; Backdash, Assault, etc
 FDM_C_ACTIVE        = "#FF0000" # Active Frames
+FDM_C_COUNTERABLE   = "#1AD11A" # Can be Counter-Hit
 
 # Invincibility Colors
 FDM_B_NOTINVINCIBLE = "" # Not Invincible
@@ -519,9 +520,11 @@ class FrameDataMeter(ctk.CTkFrame): # Frame Data Meter
 
         # Check non-invincibility states (big color)
         if (i < un - 1) and not (s.to_reset):
-            return [FDM_C_SKIPPED, False, invincible_color]
+            return [FDM_C_SKIPPED, False, invincible_color] # This program lagged, and missed a frame
         elif g_int_1b(a.ST1_ACTIVE if player1 else a.ST2_ACTIVE) != 0:
             return [FDM_C_ACTIVE, False, invincible_color]
+        elif g_int_1b(a.ST1_COUNTERABLE if player1 else a.ST2_COUNTERABLE):
+            return [FDM_C_COUNTERABLE, False, invincible_color]
         elif g_int(a.ST1_ATTACKING if player1 else a.ST2_ATTACKING) > 0:
             return [FDM_C_ATK, False, invincible_color]
         elif g_int(a.ST1_STUN_T if player1 else a.ST2_STUN_T) != 0:

@@ -10,6 +10,9 @@ MISCTIMER changed
 ~ 26 Oct 2026
 Colored Invincibility Bands
 
+~ 27 Oct 2026
+Counter Hittable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 SF6 FDM
@@ -48,6 +51,8 @@ Current Focus
 
 Long-Term Problems
 * X- and Y-Position (yuck!)
+* Air Invulnerability
+* Projectile Active
 
 Known Bugs
 * FDM_FONT_YOFFSET is slightly jank, I just keep it at 0 anyway
