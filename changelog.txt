@@ -15,6 +15,7 @@ Counter Hittable
 
 ~ 29 Oct 2026
 Wait for game
+Window name can be changed without problem
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

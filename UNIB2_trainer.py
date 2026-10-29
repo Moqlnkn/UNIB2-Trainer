@@ -7,6 +7,7 @@ import pymem.process
 import math
 import win32event
 import win32gui as wg # pyright: ignore[reportMissingModuleSource]
+import win32process as wp
 import time
 import threading
 import ctypes
@@ -94,7 +95,6 @@ LABEL_PAD = (0, 0)
 
 # Probably (definitely) never change these
 EXECUTABLE_NAME = "uni2.exe" # This ABSOLUTELY MUST be accurate
-WINDOW_NAME = "UNDER NIGHT IN-BIRTH II Sys:Celes" # This MUST be accurate for app snapping to work
 started = False
 pm = None
 module = None
@@ -739,7 +739,25 @@ class Overlay(ctk.CTk): # Data Overlay (top right)
         s.geometry(f"+{x}+{y}")
 
     def auto_snap_update(s): # Auto-move the window to the target location
-        x1, y1, x2, y2 = wg.GetClientRect(wg.FindWindow(None, WINDOW_NAME))
+        hwnd = None
+        target_pid = pm.process_id
+
+        def enum_windows_callback(window_hwnd, _):
+            nonlocal hwnd
+            if not wg.IsWindowVisible(window_hwnd):
+                return True
+            _, window_pid = wp.GetWindowThreadProcessId(window_hwnd)
+            if window_pid == target_pid:
+                hwnd = window_hwnd
+                return False
+            return True
+        
+        wg.EnumWindows(enum_windows_callback, None)
+        if hwnd is None:
+            return
+        
+        x1, y1, x2, y2 = wg.GetClientRect(hwnd)
+        x1, y1 = wg.ClientToScreen(hwnd, (x1, y1))
         s.geometry(f"+{x1 + AUTOSNAP_POSITION[0]}+{y1 + AUTOSNAP_POSITION[1]}")
 
     def overlay_update(s): #This is run every frame (defined by REFRESH_MS)
