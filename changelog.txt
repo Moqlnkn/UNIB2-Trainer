@@ -12,6 +12,9 @@ Colored Invincibility Bands
 
 ~ 27 Oct 2026
 Counter Hittable
+
+~ 29 Oct 2026
+Wait for game
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -48,6 +51,7 @@ Current Focus
 * Throw-invincibility, Strike-invincibility, Projectile-invincibility
 * Hitstop
 * Hide when game not in front
+* Ukemi
 
 Long-Term Problems
 * X- and Y-Position (yuck!)

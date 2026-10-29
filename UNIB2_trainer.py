@@ -72,7 +72,9 @@ FDM_B_INVINCIBLE    = "#F1F1F1" # Invincible
 FDM_B_PINVINCIBLE   = "#FF7700" # Projectile Invincible
 
 # These may be also changed, but be careful
-APP_CLOSE_CHECK_MS = 1000 # Check if should auto-close because the game is closed every this-many milliseconds
+APP_CLOSE_CHECK_MS = 1000 # Always check for auto-close at this interval
+GAME_WAIT_MS = 60000 # Total time the app waits for the game at initial launch before closing
+GAME_WAIT_INTERVAL = 5000 # Check for game at initial launch at this interval
 FDM_TEXT_OUTLINE_WIDTH = 1 # Looks pretty bad with values greater than 1.
 REFRESH_MS = 15 # UI Frame Rate (milliseconds per refresh)
 FDM_REFRESH_MS = 14 # Same but for FrameDataMeter (runs on a separate thread)
@@ -90,12 +92,13 @@ LABEL_PAD = (0, 0)
 
 
 
-# Probably never change these
+# Probably (definitely) never change these
 EXECUTABLE_NAME = "uni2.exe" # This ABSOLUTELY MUST be accurate
 WINDOW_NAME = "UNDER NIGHT IN-BIRTH II Sys:Celes" # This MUST be accurate for app snapping to work
-pm = pymem.Pymem(EXECUTABLE_NAME) # PyMem is how the app reads from RAM
-module =  pymem.process.module_from_name(pm.process_handle, EXECUTABLE_NAME)
-base_address = module.lpBaseOfDll # Starting address of the game application, memory offsets add to this
+started = False
+pm = None
+module = None
+base_address = None
 l = [] # Labels for debugging
 i = -1 # Label indexing for debugging
 
@@ -144,14 +147,9 @@ def wait_until(timer, deadline):
 # !!! VOODOO MAGIC ZONE END !!!
 
 # The app automatically closes if the game is not running
-def game_is_running(pm):
+def game_is_running():
     result = win32event.WaitForSingleObject(pm.process_handle, 0)
     return result == win32event.WAIT_TIMEOUT
-
-# Auto-snapping
-if not wg.FindWindow(None, WINDOW_NAME):
-    print("Window Not Found! Auto-snapping requires the game to be open with its default name.")
-    WINDOW_DRAGGABLE = True
 
 # Store all addresses in a unique class and call it "a" (read from JSON file)
 def convert_address(value):
@@ -580,8 +578,35 @@ class Overlay(ctk.CTk): # Data Overlay (top right)
 
     def __init__(s):
         super().__init__()
-
         s.title(WINDOW_TITLE)
+        s.status_label = ctk.CTkLabel(
+            s,
+            text = f" Waiting for {EXECUTABLE_NAME}... ",
+            font=("Times New Roman", 20, "bold")
+        )
+        s.status_label.pack(expand = True)
+        s.wait_started = time.monotonic()
+        s.wait_for_game()
+
+    def wait_for_game(s):
+        global pm, module, base_address, started
+        try:
+            pm = pymem.Pymem(EXECUTABLE_NAME) # Read from RAM
+            module =  pymem.process.module_from_name(pm.process_handle, EXECUTABLE_NAME)
+            base_address = module.lpBaseOfDll
+            started = True
+            s.status_label.destroy()
+            s.start_overlay()
+
+        except pymem.exception.ProcessNotFound:
+            elapsed = time.monotonic() - s.wait_started
+            if elapsed >= GAME_WAIT_MS:
+                s.destroy()
+                return
+            s.after(GAME_WAIT_INTERVAL, s.wait_for_game)
+
+    def start_overlay(s):
+        s.deiconify()
         s.geometry(WINDOW_RESOLUTION)
         s.minsize(WINDOW_MINSIZE[0], WINDOW_MINSIZE[1])
         s.attributes("-topmost", True, "-alpha", WINDOW_ALPHA) # Always on top
@@ -730,7 +755,7 @@ class Overlay(ctk.CTk): # Data Overlay (top right)
             s.after(REFRESH_MS, s.overlay_update) #Run again on the next interval defined by REFRESH_MS
 
     def check_game_process(s):
-            if not game_is_running(pm):
+            if started and not game_is_running():
                 s.fdm.stop_worker()
                 s.destroy()
                 return
